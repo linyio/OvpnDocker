@@ -1,0 +1,63 @@
+#Brief: allow internet access for requests from a specific interface
+#Param:
+#   $1: interface name
+#
+#Remark: the access is given through iptables MASQUERADE rules from the nat POSTROUTING chaing
+function AllowInternatAccess {
+  ifName=$1
+  defaultGwIfName=$(DefaultGwInterface)
+  for netPrefix in $(InterfaceNetAddrs $ifName); do
+    iptables -t nat -D POSTROUTING -w -s $netPrefix -o $defaultGwIfName -j MASQUERADE &>/dev/null
+    iptables -t nat -I POSTROUTING 1 -w -s $netPrefix -o $defaultGwIfName -j MASQUERADE
+  done
+}
+
+#Brief: returns the network prefix(es) of a given interface
+#Params:
+#   $1: interface
+function InterfaceNetAddrs {
+  ifName=$1
+  ip r show dev $ifName | grep "kernel scope" | cut -d " " -f 1
+}
+
+#Brief: returns the default gateway interface
+function DefaultGwInterface {
+  ip r | grep "default via" | cut -d " " -f 5
+}
+
+#Brief: list entries (one per line) from the specified directory in alphabetic order
+function DirEntries {
+  local directory=$1
+  local filesFilter=$2
+  local maxEntries=$3
+
+  local cmdLine="ls -1 $directory"
+
+  [ -n "$filesFilter" ] && cmdLine="$cmdLine | grep $filesFilter"
+  [ -n "$maxEntries" ] && cmdLine="$cmdLine | head -n $maxEntries"
+
+  eval "$cmdLine"
+}
+
+#Brief: count files from the specified directory
+function DirEntriesNo {
+  DirEntries $* | wc -l
+}
+
+#Brief: computes the max of the two integers
+function Max {
+  if [ $1 -gt $2 ]; then 
+    echo $1
+  else
+    echo $2
+  fi
+}
+
+#Brief: computes the min of the two integers
+function Min {
+  if [ $1 -gt $2 ]; then 
+    echo $2
+  else
+    echo $1
+  fi
+}
